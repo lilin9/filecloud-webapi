@@ -1,6 +1,6 @@
 ﻿using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Routing;
-using WebAPI.Middleware;
+using WebAPI.Filters;
 
 namespace WebAPI.Extensions {
     /// <summary>

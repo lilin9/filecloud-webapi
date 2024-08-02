@@ -1,17 +1,20 @@
-﻿using Domain.Entities.SalveModel;
+﻿using Domain.Entities.Enum;
+using Domain.Entities.SalveModel;
 using Microsoft.EntityFrameworkCore;
 using NETCore.Encrypt;
 
 namespace Domain.Entities {
     public class UserInfo {
-        public UserInfo() { }
+        private UserInfo() { }
 
-        public UserInfo(string username, string email) {
+        public UserInfo(string username, string email, string password) {
             UserName = username;
             Email = email;
+            Password = password;
 
             UserId = Guid.NewGuid();
             CreateTime = DateTime.Now;
+            UpdateTime = DateTime.Now;
         }
 
         /// <summary>
@@ -49,13 +52,13 @@ namespace Domain.Entities {
         /// 用户头像，必须
         /// </summary>
         [Comment("用户头像，必须")]
-        public string Avatar { get; set; }
+        public string? Avatar { get; private set; }
 
         /// <summary>
         /// 账户被封禁时间，-1：永久；0：正常，必须
         /// </summary>
         [Comment("账户被封禁时间，-1：永久；0：正常，必须")]
-        public MyTime BanTime { get; set; }
+        public MyTime BanTime { get; set; } = new MyTime {Value = 0,Unit = TimeUnit.Hour};
 
         /// <summary>
         /// 用户邮箱，必须
@@ -74,8 +77,9 @@ namespace Domain.Entities {
         /// </summary>
         [Comment("用户密码，必须")]
         private string password;
-        public string Password { get => password;
-            set => password = EncryptProvider.Md5(password);
+        public string Password {
+            get => password;
+            set => password = LockPass(value);
         }
 
         /// <summary>
@@ -90,10 +94,23 @@ namespace Domain.Entities {
         [Comment("账户解封时间，可选")]
         public DateTime? UnLockTime { get; set; }
 
+
         /// <summary>
-        /// 用户磁盘使用情况，必须
+        /// 验证密码是否相同
         /// </summary>
-        [Comment("用户磁盘使用情况，必须")]
-        public Disk UserDisk { get; set; }
+        /// <param name="unLockPass">未加密密码</param>
+        /// <returns></returns>
+        public bool CheckPassword(string unLockPass) {
+            return Password.Equals(LockPass(unLockPass));
+        }
+
+        /// <summary>
+        /// 对用户密码进行md5加密
+        /// </summary>
+        /// <param name="pass"></param>
+        /// <returns></returns>
+        public string LockPass(string pass) {
+            return EncryptProvider.Md5(pass);
+        }
     }
 }

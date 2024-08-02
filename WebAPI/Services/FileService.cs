@@ -1,12 +1,12 @@
-﻿using Domain.Entities;
+﻿using Domain;
+using Domain.Entities;
 using Domain.Entities.Enum;
 using Domain.Entities.SalveModel;
 using Domain.Repository;
+using Domain.Vo;
 
 namespace WebAPI.Services {
-    public class FileService(IFilesRepository filesRepository, IConfiguration configuration) {
-        //读取文件的物理保存路径
-        private readonly string _basicFilePath = configuration["CustomStrings:BasicFilePath"]!;
+    public class FileService(IFilesRepository filesRepository) {
 
         /// <summary>
         /// 上传文件
@@ -19,11 +19,13 @@ namespace WebAPI.Services {
                 parentId,
                 file.FileName,
                 null,
-                new MyFile(file.Length, FileUnit.Bytes),
+                new MyFile(file.Length),
                 file.ContentType,
                 false
             );
-            fileModel.UploadFile(file, _basicFilePath);
+            //补全文件静态路径
+            filesRepository.CompleteFileUrl(fileModel);
+            fileModel.UploadFile(file, fileModel.StaticDownloadUrl);
             await filesRepository.SaveOneAsync(fileModel);
 
             return fileModel;
@@ -45,8 +47,12 @@ namespace WebAPI.Services {
                 null,
                 true
             );
+
+            //补全文件的静态路径
+            filesRepository.CompleteFileUrl(folderModel);
+
             //写入数据库和创建本地文件夹
-            folderModel.CreateFolder(_basicFilePath);
+            folderModel!.CreateFolder(folderModel.StaticDownloadUrl);
             await filesRepository.SaveOneAsync(folderModel);
 
             return folderModel;
@@ -59,33 +65,40 @@ namespace WebAPI.Services {
         /// <param name="newFileName"></param>
         /// <returns></returns>
         public async Task<Files> RenameFile(Guid fileId, string newFileName) {
-            var fileModel =  await filesRepository.GetOne(fileId);
-            var oldFilePath = _basicFilePath + fileModel.StaticDownloadUrl;
-            var newFilePath = _basicFilePath + fileModel.StaticDownloadUrl.Replace(fileModel.FileName, newFileName);
+            var fileModel = await filesRepository.GetOne(fileId);
+            if (fileModel == null) {
+                throw new CustomReplyException("文件在数据库无记录");
+            }
+            //查找文件相对路径
+            filesRepository.CompleteFileUrl(fileModel);
+
+            //拼出文件路径
+            var oldFilePath = fileModel!.StaticDownloadUrl;
+            var newFilePath = oldFilePath[..(oldFilePath.LastIndexOf('/') + 1)] + newFileName;
+
 
             //判断一下原文件是否是存在的
             if (!fileModel.ExistsFile(oldFilePath)) {
-                throw new FileNotFoundException("文件不存在");
+                throw new CustomReplyException("文件不存在");
             }
 
             //判断新文件名是否已经存在
             if (fileModel.ExistsFile(newFilePath)) {
-                throw new Exception("文件名已存在");
+                throw new CustomReplyException("文件名已存在");
             }
 
             //修改文件名
-            fileModel.RenameFile(newFileName, _basicFilePath);
+            fileModel.RenameFile(newFilePath, oldFilePath);
             return fileModel;
         }
 
         /// <summary>
-        /// 获取文件访问的静态链接
+        /// 获取文件列表
         /// </summary>
-        /// <param name="parentFileModel">父文件</param>
-        /// <param name="fileName">文件名</param>
+        /// <param name="listVo"></param>
         /// <returns></returns>
-        private string GetStaticDownloadFilePath(Files? parentFileModel, string fileName) {
-            return parentFileModel == null ? "/" + fileName : parentFileModel.StaticDownloadUrl + "/" + fileName;
+        public Task<List<Files>> GetList(FileListVo listVo) {
+               return filesRepository.FindList(listVo.PageIndex, listVo.PageSize,listVo.GuidParentId);
         }
     }
 }

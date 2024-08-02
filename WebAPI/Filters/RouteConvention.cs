@@ -1,12 +1,13 @@
 ﻿using Microsoft.AspNetCore.Mvc.ApplicationModels;
 using Microsoft.AspNetCore.Mvc.Routing;
 
-namespace WebAPI.Middleware
+namespace WebAPI.Filters
 {
     /// <summary>
     /// 遍历所有Controller，添加路由前缀
     /// </summary>
-    public class RouteConvention(IRouteTemplateProvider routeTemplateProvider) : IApplicationModelConvention {
+    public class RouteConvention(IRouteTemplateProvider routeTemplateProvider) : IApplicationModelConvention
+    {
         private readonly AttributeRouteModel _centralPrefix = new(routeTemplateProvider);
 
         public void Apply(ApplicationModel application)

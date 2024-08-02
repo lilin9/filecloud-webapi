@@ -25,10 +25,36 @@ namespace Domain.Repository
         public Task<Files> GetOne(Guid fileId);
 
         /// <summary>
-        /// 获取文件的相对静态下载路径
+        /// 补全文件的静态下载路径
         /// </summary>
         /// <param name="file"></param>
         /// <returns></returns>
-        public Task<Files?> FindStaticDownloadUrl(Files? file);
+        public void CompleteFileUrl(Files? file);
+
+
+        /// <summary>
+        /// 获取文件的静态以及动态下载路径，路径是完整的
+        /// </summary>
+        /// <param name="parentFileId">传入父id</param>
+        /// <param name="currentFileName">当前文件名</param>
+        /// <returns>返回静态下载路径，返回动态访问路径</returns>
+        public (Task<string>, Task<string>) FindFileUrl(Guid? parentFileId, string currentFileName);
+
+        /// <summary>
+        /// 查询文件列表
+        /// </summary>
+        /// <param name="pageIndex">页索引，从1开始</param>
+        /// <param name="pageSize">当页大小</param>
+        /// <returns></returns>
+        public Task<List<Files>> FindList(int pageIndex, int pageSize);
+
+        /// <summary>
+        /// 查询文件列表
+        /// </summary>
+        /// <param name="pageIndex">页索引，从1开始</param>
+        /// <param name="pageSize">当页大小</param>
+        /// <param name="parentId">父文件id</param>
+        /// <returns></returns>
+        public Task<List<Files>> FindList(int pageIndex, int pageSize, Guid? parentId);
     }
 }

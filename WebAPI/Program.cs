@@ -5,11 +5,15 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Server.Kestrel.Core;
 using WebAPI.Middleware;
 using WebAPI.Extensions;
+using WebAPI.Filters;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// Add services to the container.
+var sqlServerStr = builder.Configuration.GetConnectionString("SqlServerStr")!;
+var  routePrefixStr = builder.Configuration.GetSection("CustomStrings:RoutePrefixStr").Value;
+var maxUploadFileSizeStr = builder.Configuration.GetSection("CustomStrings:MaxUploadFileSize").Value;
 
+// Add services to the container.
 builder.Services.AddControllers();
 // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
 builder.Services.AddEndpointsApiExplorer();
@@ -17,7 +21,7 @@ builder.Services.AddSwaggerGen();
 
 //配置数据库连接
 builder.Services.AddDbContext<SqlServerDbContext>(opt => {
-    opt.UseSqlServer(builder.Configuration.GetConnectionString("SqlServerStr"));
+    opt.UseSqlServer(sqlServerStr);
 });
 
 builder.Services.AddControllers(opt => {
@@ -32,7 +36,7 @@ builder.Services.AddControllers(opt => {
 
 //全局统一添加路由前缀
 builder.Services.AddControllers(opt => {
-    opt.UseCentralRoutePrefix(builder.Configuration.GetSection("CustomStrings:RoutePrefixStr").Value!);
+    opt.UseCentralRoutePrefix(routePrefixStr!);
 });
 
 //添加工作单元过滤器
@@ -44,7 +48,6 @@ builder.Services.Configure<MvcOptions>(opts => {
 builder.Services.AddAllScope();
 
 //设置请求头最大上传文件大小
-var maxUploadFileSizeStr = builder.Configuration.GetSection("CustomStrings:MaxUploadFileSize").Value;
 var maxUploadFileSize = string.IsNullOrEmpty(maxUploadFileSizeStr) ? 0 : int.Parse(maxUploadFileSizeStr);
 builder.Services.Configure<IISServerOptions>(opt => {
     opt.MaxRequestBodySize = maxUploadFileSize;
@@ -52,6 +55,9 @@ builder.Services.Configure<IISServerOptions>(opt => {
 builder.Services.Configure<KestrelServerOptions>(opt => {
     opt.Limits.MaxRequestBodySize = maxUploadFileSize;
 });
+
+//注册缓存服务
+builder.Services.AddMemoryCache();
 
 var app = builder.Build();
 

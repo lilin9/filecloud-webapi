@@ -13,14 +13,11 @@ namespace Infrastructure.Configs {
             builder.Property(x => x.Avatar).HasMaxLength(128);
             builder.OwnsOne(x => x.BanTime).Property(x => x.Unit).HasConversion<string>();
             builder.Property(x => x.Email).IsRequired().HasMaxLength(128);
+            builder.HasIndex(x => x.Email).IsUnique();
             builder.Property(x => x.UserName).IsRequired().HasMaxLength(128);
+            builder.HasIndex(x => x.UserName).IsUnique();
             builder.Property(x => x.Password).IsRequired().HasMaxLength(128);
             builder.Property(x => x.DisableReason).HasMaxLength(128);
-            builder.OwnsOne(x => x.UserDisk, ud => {
-                ud.OwnsOne(x => x.TotalCapacity).Property(x => x.Unit).HasConversion<string>();
-                ud.OwnsOne(x => x.UsedCapacity).Property(x => x.Unit).HasConversion<string>();
-                ud.OwnsOne(x => x.RemainingCapacity).Property(x => x.Unit).HasConversion<string>();
-            });
         }
     }
 }

@@ -12,8 +12,8 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace Infrastructure.Migrations
 {
     [DbContext(typeof(SqlServerDbContext))]
-    [Migration("20240726093514_UpdateDatabase")]
-    partial class UpdateDatabase
+    [Migration("20240801060916_InitDb")]
+    partial class InitDb
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -96,7 +96,6 @@ namespace Infrastructure.Migrations
                         .HasComment("当前账户是否可用，必须");
 
                     b.Property<string>("Avatar")
-                        .IsRequired()
                         .HasMaxLength(128)
                         .HasColumnType("nvarchar(128)")
                         .HasComment("用户头像，必须");
@@ -140,6 +139,12 @@ namespace Infrastructure.Migrations
 
                     b.HasKey("Id");
 
+                    b.HasIndex("Email")
+                        .IsUnique();
+
+                    b.HasIndex("UserName")
+                        .IsUnique();
+
                     b.ToTable("UserInfos", (string)null);
                 });
 
@@ -172,88 +177,6 @@ namespace Infrastructure.Migrations
 
             modelBuilder.Entity("Domain.Entities.UserInfo", b =>
                 {
-                    b.OwnsOne("Domain.Entities.Disk", "UserDisk", b1 =>
-                        {
-                            b1.Property<int>("UserInfoId")
-                                .HasColumnType("int");
-
-                            b1.HasKey("UserInfoId");
-
-                            b1.ToTable("UserInfos");
-
-                            b1.WithOwner()
-                                .HasForeignKey("UserInfoId");
-
-                            b1.OwnsOne("Domain.Entities.SalveModel.MyFile", "RemainingCapacity", b2 =>
-                                {
-                                    b2.Property<int>("DiskUserInfoId")
-                                        .HasColumnType("int");
-
-                                    b2.Property<string>("Unit")
-                                        .IsRequired()
-                                        .HasColumnType("nvarchar(max)");
-
-                                    b2.Property<double>("Value")
-                                        .HasColumnType("float");
-
-                                    b2.HasKey("DiskUserInfoId");
-
-                                    b2.ToTable("UserInfos");
-
-                                    b2.WithOwner()
-                                        .HasForeignKey("DiskUserInfoId");
-                                });
-
-                            b1.OwnsOne("Domain.Entities.SalveModel.MyFile", "TotalCapacity", b2 =>
-                                {
-                                    b2.Property<int>("DiskUserInfoId")
-                                        .HasColumnType("int");
-
-                                    b2.Property<string>("Unit")
-                                        .IsRequired()
-                                        .HasColumnType("nvarchar(max)");
-
-                                    b2.Property<double>("Value")
-                                        .HasColumnType("float");
-
-                                    b2.HasKey("DiskUserInfoId");
-
-                                    b2.ToTable("UserInfos");
-
-                                    b2.WithOwner()
-                                        .HasForeignKey("DiskUserInfoId");
-                                });
-
-                            b1.OwnsOne("Domain.Entities.SalveModel.MyFile", "UsedCapacity", b2 =>
-                                {
-                                    b2.Property<int>("DiskUserInfoId")
-                                        .HasColumnType("int");
-
-                                    b2.Property<string>("Unit")
-                                        .IsRequired()
-                                        .HasColumnType("nvarchar(max)");
-
-                                    b2.Property<double>("Value")
-                                        .HasColumnType("float");
-
-                                    b2.HasKey("DiskUserInfoId");
-
-                                    b2.ToTable("UserInfos");
-
-                                    b2.WithOwner()
-                                        .HasForeignKey("DiskUserInfoId");
-                                });
-
-                            b1.Navigation("RemainingCapacity")
-                                .IsRequired();
-
-                            b1.Navigation("TotalCapacity")
-                                .IsRequired();
-
-                            b1.Navigation("UsedCapacity")
-                                .IsRequired();
-                        });
-
                     b.OwnsOne("Domain.Entities.SalveModel.MyTime", "BanTime", b1 =>
                         {
                             b1.Property<int>("UserInfoId")
@@ -275,9 +198,6 @@ namespace Infrastructure.Migrations
                         });
 
                     b.Navigation("BanTime")
-                        .IsRequired();
-
-                    b.Navigation("UserDisk")
                         .IsRequired();
                 });
 #pragma warning restore 612, 618

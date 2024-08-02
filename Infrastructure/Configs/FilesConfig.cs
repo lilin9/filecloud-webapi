@@ -12,6 +12,7 @@ namespace Infrastructure.Configs {
             builder.Property(x => x.FileId).IsRequired();
             builder.Property(x => x.FileName).IsRequired().HasMaxLength(1024);
             builder.Ignore(x => x.StaticDownloadUrl);
+            builder.Ignore(x => x.DynamicDownloadUrl);
             builder.OwnsOne(x => x.FileSize).Property(x => x.Unit).HasConversion<string>().HasMaxLength(20);
             builder.Property(x => x.FileMimeType).HasMaxLength(128);
             builder.Property(x => x.FileOnlyTag).HasMaxLength(128);

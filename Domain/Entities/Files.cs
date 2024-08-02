@@ -2,7 +2,6 @@
 using Domain.Entities.SalveModel;
 using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
-using System.IO;
 
 namespace Domain.Entities {
     public class Files {
@@ -54,10 +53,14 @@ namespace Domain.Entities {
         public string FileName { get; private set; }
 
         /// <summary>
-        /// 文件的静态下载链接
+        /// 文件的静态下载路径
         /// </summary>
-        [Comment("文件的静态下载链接")]
-        public string StaticDownloadUrl { get; set; }
+        public string StaticDownloadUrl { get; set; } = "/";
+
+        /// <summary>
+        /// 文件的动态访问链接
+        /// </summary>
+        public string? DynamicDownloadUrl { get; set; }
 
         /// <summary>
         /// 创建时间
@@ -104,9 +107,8 @@ namespace Domain.Entities {
         /// <summary>
         /// 创建文件夹
         /// </summary>
-        /// <param name="basicFilePath">保存文件的物理基础路径</param>
-        public void CreateFolder(string basicFilePath) {
-            var savePath = basicFilePath + StaticDownloadUrl;
+        /// <param name="savePath">文件夹路径</param>
+        public void CreateFolder(string savePath) {
             if (Directory.Exists(savePath)) {return;}
             Directory.CreateDirectory(savePath);
         }
@@ -122,21 +124,16 @@ namespace Domain.Entities {
         /// <summary>
         /// 重命名文件名称
         /// </summary>
-        /// <param name="newFileName">新文件名</param>
-        /// <param name="basicFilePath">保存文件的物理基础路径</param>
-        public void RenameFile(string newFileName, string basicFilePath) {
-            var newStaticDownloadUrl = StaticDownloadUrl.Replace(FileName, newFileName);
-            var oldFilePath = basicFilePath + StaticDownloadUrl;
-            var newFilePath = basicFilePath + newStaticDownloadUrl;
-
+        /// <param name="newFilePath">新文件路径</param>
+        /// <param name="oldFilePath">旧文件路径</param>
+        public void RenameFile(string newFilePath, string oldFilePath) {
             if (IsFolder) {
                 Directory.Move(oldFilePath, newFilePath);
             } else {
                 File.Move(oldFilePath, newFilePath);
             }
-            FileName = newFileName;
+            FileName = newFilePath[(newFilePath.LastIndexOf('/') + 1)..];
             UpdateTime = DateTime.Now;
-            StaticDownloadUrl = newStaticDownloadUrl;
         }
 
         /// <summary>
@@ -152,12 +149,10 @@ namespace Domain.Entities {
         /// 上传文件
         /// </summary>
         /// <param name="file">文件数据</param>
-        /// <param name="basicFilePath">保存文件的物理基础路径</param>
-        public async void UploadFile(IFormFile file, string basicFilePath) {
-            //创建文件保存路径
-            var filePath = basicFilePath + StaticDownloadUrl;
+        /// <param name="folderPath">文件的保存路径</param>
+        public async void UploadFile(IFormFile file, string folderPath) {
             //保存文件
-            await using var fileStream = new FileStream(filePath, FileMode.Create);
+            await using var fileStream = new FileStream(folderPath, FileMode.Create);
             await file.CopyToAsync(fileStream);
         }
 
