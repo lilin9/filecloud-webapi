@@ -1,5 +1,5 @@
-﻿using System.Text;
-using System.Web;
+﻿using System.Web;
+using Domain.Entities;
 using Domain.Vo;
 using Infrastructure;
 using Microsoft.AspNetCore.Mvc;
@@ -9,7 +9,7 @@ using WebAPI.Services;
 namespace WebAPI.Controllers {
     [ApiController]
     [Route("myFile")]
-    public class MyFileController(FileService fileService, IWebHostEnvironment webHostEnvironment): ControllerBase {
+    public class MyFileController(FileService fileService): ControllerBase {
         /// <summary>
         /// 上传文件
         /// </summary>
@@ -19,12 +19,12 @@ namespace WebAPI.Controllers {
         /// <exception cref="ArgumentNullException"></exception>
         [HttpPost("upload/{parentId}")]
         [UnityOfWork(typeof(SqlServerDbContext))]
-        public ActionResult UploadFile(IFormFile file, string? parentId) {
+        public async Task<ActionResult> UploadFile(IFormFile file, string? parentId) {
             if (file.Length == 0) {
                 return BadRequest("需要提供上传文件数据");
             }
 
-            var resultFile = fileService.UploadFile(file, ConvertToGuid(parentId));
+            var resultFile = await fileService.UploadFile(file, ConvertToGuid(parentId));
             return Ok(resultFile);
         }
 
@@ -69,7 +69,7 @@ namespace WebAPI.Controllers {
         /// <param name="listVo"></param>
         /// <returns></returns>
         [HttpPost("searchList")]
-        public ActionResult SearchList([FromBody] FileListVo listVo) {
+        public ActionResult SearchList([FromBody] FileListVm listVo) {
             if (listVo.PageIndex <= 0) {
                 listVo.PageIndex = 1;
             }
@@ -107,6 +107,47 @@ namespace WebAPI.Controllers {
             }
         }
 
+        /// <summary>
+        /// 修改文件名
+        /// </summary>
+        /// <param name="fileVo"></param>
+        /// <returns></returns>
+        /// <exception cref="ArgumentException"></exception>
+
+        [HttpPost("rename")]
+        [UnityOfWork(typeof(SqlServerDbContext))]
+        public async Task<ActionResult> RenameFile([FromBody] FileVo fileVo) {
+            if (string.IsNullOrEmpty(fileVo.FileId)) {
+                throw new ArgumentException("需要提供文件id");
+            }
+
+            if (string.IsNullOrEmpty(fileVo.FileName)) {
+                throw new ArgumentException("需要提供文件名");
+            }
+
+            fileVo.GuidFileId = ConvertStrToGuid(fileVo.FileId)!;
+            var file = await fileService.RenameFile(fileVo.GuidFileId, fileVo.FileName);
+            return Ok(file);
+        }
+
+
+        /// <summary>
+        /// 删除文件，根据文件ID
+        /// </summary>
+        /// <param name="fileVo"></param>
+        /// <returns></returns>
+        [HttpPost("delete")]
+        [UnityOfWork(typeof(SqlServerDbContext))]
+        public async Task<ActionResult> DeleteFile([FromBody] FileVo fileVo) {
+            if (string.IsNullOrEmpty(fileVo.FileId)) {
+                throw new ArgumentException("需要提供文件Iid");
+            }
+
+            fileVo.GuidFileId = ConvertStrToGuid(fileVo.FileId);
+            await fileService.DeleteFile(fileVo.GuidFileId);
+            return Ok();
+        }
+
 
         /// <summary>
         /// 把字符串类型ID转换成Guid类型ID
@@ -114,7 +155,16 @@ namespace WebAPI.Controllers {
         /// <param name="id"></param>
         /// <returns></returns>
         private Guid? ConvertToGuid(string? id) {
-            return string.IsNullOrEmpty(id?.Trim()) ? Guid.Empty : Guid.Parse(id);
+            return id == null || string.IsNullOrEmpty(id.Trim()) ? Guid.Empty : Guid.Parse(id);
+        }
+
+        /// <summary>
+        /// 把字符串类型ID转换成Guid类型ID
+        /// </summary>
+        /// <param name="id"></param>
+        /// <returns></returns>
+        private Guid ConvertStrToGuid(string id) {
+            return Guid.Parse(id);
         }
     }
 }

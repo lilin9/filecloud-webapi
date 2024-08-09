@@ -7,7 +7,7 @@ namespace Domain.Entities {
     public class Files {
         private Files() { }
 
-        public Files(Guid? parentId, string fileName, Guid? userInfoId, 
+        public Files(Guid? parentId, string fileName, Guid? userInfoId,
             MyFile? fileSize, string? fileMimeType, bool isFolder) {
             FileId = Guid.NewGuid();
             UserInfoId = userInfoId;
@@ -17,7 +17,7 @@ namespace Domain.Entities {
             UpdateTime = DateTime.Now;
             FileSize = fileSize ?? new MyFile(0, FileUnit.Bytes);
             FileMimeType = fileMimeType;
-            FileOnlyTag = Path.GetFileNameWithoutExtension(fileName) + fileSize + DateTimeOffset.UtcNow.ToUnixTimeSeconds();
+            FileOnlyTag = Path.GetFileNameWithoutExtension(fileName) + fileSize?.Value + DateTimeOffset.UtcNow.ToUnixTimeSeconds();
             IsFolder = isFolder;
         }
 
@@ -109,16 +109,8 @@ namespace Domain.Entities {
         /// </summary>
         /// <param name="savePath">文件夹路径</param>
         public void CreateFolder(string savePath) {
-            if (Directory.Exists(savePath)) {return;}
+            if (Directory.Exists(savePath)) { return; }
             Directory.CreateDirectory(savePath);
-        }
-
-        /// <summary>
-        /// 删除指定的目录
-        /// </summary>
-        /// <param name="folderPath">目录路径</param>
-        public void DeleteFolder(string folderPath) {
-            Directory.Delete(folderPath, true);
         }
 
         /// <summary>
@@ -137,31 +129,67 @@ namespace Domain.Entities {
         }
 
         /// <summary>
-        /// 判断文件或者文件夹是否存在
-        /// </summary>
-        /// <param name="filePath">文件路径</param>
-        /// <returns></returns>
-        public bool ExistsFile(string filePath) {
-            return File.Exists(filePath) || Directory.Exists(filePath);
-        }
-
-        /// <summary>
         /// 上传文件
         /// </summary>
         /// <param name="file">文件数据</param>
         /// <param name="folderPath">文件的保存路径</param>
-        public async void UploadFile(IFormFile file, string folderPath) {
+        public async Task UploadFileAsync(IFormFile file, string folderPath) {
             //保存文件
-            await using var fileStream = new FileStream(folderPath, FileMode.Create);
+            await using var fileStream = new FileStream(folderPath, FileMode.Create, FileAccess.Write);
             await file.CopyToAsync(fileStream);
         }
 
         /// <summary>
         /// 删除指定的文件
         /// </summary>
-        /// <param name="filePath">文件的路径</param>
-        public void DeleteFile(string filePath) {
-            File.Delete(filePath);
+        public void DeleteFile() {
+            //判断是否存在，不存在直接退出
+            if (!Exists()) {
+                return;
+            }
+
+            if (IsFolder) {
+                Directory.Delete(StaticDownloadUrl, true);
+            } else {
+                File.Delete(StaticDownloadUrl);
+            }
+        }
+
+        /// <summary>
+        /// 检测文件名是否在目录内重复
+        /// </summary>
+        /// <param name="filePath">文件路径</param>
+        /// <returns></returns>
+        public bool CheckRepeatedName(string filePath) {
+            if (string.IsNullOrEmpty(filePath)) {
+                return false;
+            }
+
+            return File.Exists(filePath) || Directory.Exists(filePath);
+        }
+
+        /// <summary>
+        /// 检测文件名是否在目录内重复
+        /// </summary>
+        /// <returns></returns>
+        public bool CheckRepeatedName() {
+            if (string.IsNullOrEmpty(StaticDownloadUrl)) {
+                return false;
+            }
+
+            return IsFolder ? Directory.Exists(StaticDownloadUrl) : File.Exists(StaticDownloadUrl);
+        }
+
+        /// <summary>
+        /// 判断文件是否存在
+        /// </summary>
+        /// <returns></returns>
+        public bool Exists() {
+            if (string.IsNullOrEmpty(StaticDownloadUrl)) {
+                return false;
+            }
+
+            return (IsFolder && Directory.Exists(StaticDownloadUrl)) || File.Exists(StaticDownloadUrl);
         }
     }
 }

@@ -56,5 +56,19 @@ namespace Domain.Repository
         /// <param name="parentId">父文件id</param>
         /// <returns></returns>
         public Task<List<Files>> FindList(int pageIndex, int pageSize, Guid? parentId);
+
+        /// <summary>
+        /// 删除单个文件
+        /// </summary>
+        /// <param name="file"></param>
+        /// <returns></returns>
+        public Task DeleteOne(Files file);
+
+        /// <summary>
+        /// 根据传入的文件Id，查询子文件
+        /// </summary>
+        /// <param name="fileId"></param>
+        /// <returns></returns>
+        public Task<List<Files>> FindChildren(Guid fileId);
     }
 }

@@ -18,6 +18,8 @@ namespace Infrastructure.Configs {
             builder.HasIndex(x => x.UserName).IsUnique();
             builder.Property(x => x.Password).IsRequired().HasMaxLength(128);
             builder.Property(x => x.DisableReason).HasMaxLength(128);
+            builder.Ignore(x => x.OnlineAvatar);
+            builder.Ignore(x => x.StaticAvatar);
         }
     }
 }

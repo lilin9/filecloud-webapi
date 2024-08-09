@@ -29,5 +29,12 @@ namespace Domain.Repository {
         /// <param name="userInfo"></param>
         /// <returns></returns>
         public Task<UserInfo?> SaveOneAsync(UserInfo userInfo);
+
+        /// <summary>
+        /// 修改单个用户
+        /// </summary>
+        /// <param name="userInfo"></param>
+        /// <returns></returns>
+        public UserInfo UpdateOne(UserInfo userInfo);
     }
 }

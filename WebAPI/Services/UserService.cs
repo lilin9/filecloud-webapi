@@ -1,4 +1,5 @@
 ﻿using System.Data;
+using System.Data.SqlTypes;
 using Domain;
 using Domain.Entities;
 using Domain.Repository;
@@ -13,7 +14,7 @@ namespace WebAPI.Services {
         /// </summary>
         /// <param name="userVo"></param>
         /// <returns></returns>
-        public async Task<UserInfo?> Register(UserInfoVo userVo) {
+        public async Task<UserInfo?> Register(UserInfoVm userVo) {
             //用户名和邮箱是否已经注册
             if (userRepository.FindOneByUserNameAsync(userVo.UserName).Result != null) {
                 throw new CustomReplyException("用户名已存在");
@@ -34,7 +35,7 @@ namespace WebAPI.Services {
         /// <param name="userVo"></param>
         /// <returns></returns>
         /// <exception cref="DataException"></exception>
-        public async Task<UserInfo?> Login(UserInfoVo userVo) {
+        public async Task<UserInfo?> Login(UserInfoVm userVo) {
             //验证邮箱是否存在
             var userInfo = await userRepository.FindOneByEmailAsync(userVo.Email);
             if (userInfo == null) {
@@ -47,19 +48,21 @@ namespace WebAPI.Services {
         /// <summary>
         /// 重置密码
         /// </summary>
-        /// <param name="userInfo"></param>
+        /// <param name="email"></param
+        /// <param name="password"></param
         /// <returns></returns>
         /// <exception cref="CustomReplyException"></exception>
-        public async Task<bool> ResetPassword(UserInfo userInfo) {
-            var result = await userRepository.FindOneByUserIdAsync(userInfo.UserId);
-            if (result == null) {
+        public async Task<UserInfo> ResetPassword(string email, string password) {
+            var userInfo = await userRepository.FindOneByEmailAsync(email);
+            if (userInfo == null) {
                 throw new CustomReplyException("当前用户没有注册信息");
             }
 
-            var row = await dbContext.UserInfos
+            userInfo.LockPass(password);
+            await dbContext.UserInfos
                 .Where(u => u.UserId == userInfo.UserId)
                 .ExecuteUpdateAsync(u => u.SetProperty(p => p.Password, userInfo.Password));
-            return row > 0;
+            return userInfo;
         }
 
         /// <summary>
@@ -83,5 +86,39 @@ namespace WebAPI.Services {
                 .ExecuteUpdateAsync(u => u.SetProperty(e => e.Email, userInfo.Email));
             return row > 0;
         }
+
+        /// <summary>
+        /// 确认密码是否正确
+        /// </summary>
+        /// <param name="userInfoVo"></param>
+        /// <returns></returns>
+        public async Task<bool> CheckPassword(UserInfoVm userInfoVo) {
+            var user =await userRepository.FindOneByUserIdAsync(Guid.Parse(userInfoVo.UserId!));
+            return user?.CheckPassword(userInfoVo.Password) ?? false;
+        }
+
+        /// <summary>
+        /// 重置用户头像
+        /// </summary>
+        /// <param name="avatarFile"></param>
+        /// <param name="userId"></param>
+        /// <returns></returns>
+        public async Task<UserInfo> ResetAvatar(IFormFile avatarFile, Guid userId) {
+            try
+            {
+                var user = await userRepository.FindOneByUserIdAsync(userId);
+                if (user == null) {
+                    throw new SqlNullValueException("用户数据不存在");
+                }
+
+                user.UpdateAvatar(avatarFile);
+                user = userRepository.UpdateOne(user);
+                return user;
+            }
+            catch (Exception e) {
+                throw new CustomReplyException("上传文件失败，请重试");
+            }
+        }
     }
 }
+     

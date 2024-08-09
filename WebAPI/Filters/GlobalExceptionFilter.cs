@@ -10,10 +10,12 @@ namespace WebAPI.Filters
     /// </summary>
     public class GlobalExceptionFilter : IAsyncExceptionFilter
     {
+
         public Task OnExceptionAsync(ExceptionContext context)
         {
             ResponseResult exceptionResult;
-            if (context.Exception.GetType() == typeof(CustomReplyException))
+            var exception = context.Exception.InnerException;
+            if (exception is CustomReplyException)
             {
                 exceptionResult = new ResponseResult
                 {

@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using System.Text.Json.Serialization;
 using Infrastructure;
+using Microsoft.AspNetCore.Http.Features;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Server.Kestrel.Core;
 using WebAPI.Middleware;
@@ -10,7 +11,7 @@ using WebAPI.Filters;
 var builder = WebApplication.CreateBuilder(args);
 
 var sqlServerStr = builder.Configuration.GetConnectionString("SqlServerStr")!;
-var  routePrefixStr = builder.Configuration.GetSection("CustomStrings:RoutePrefixStr").Value;
+var routePrefixStr = builder.Configuration.GetSection("CustomStrings:RoutePrefixStr").Value;
 var maxUploadFileSizeStr = builder.Configuration.GetSection("CustomStrings:MaxUploadFileSize").Value;
 
 // Add services to the container.
@@ -54,6 +55,11 @@ builder.Services.Configure<IISServerOptions>(opt => {
 });
 builder.Services.Configure<KestrelServerOptions>(opt => {
     opt.Limits.MaxRequestBodySize = maxUploadFileSize;
+});
+
+//配置 IFormFile 文件最大上传大小
+builder.Services.Configure<FormOptions>(opt => {
+    opt.MultipartBodyLengthLimit = maxUploadFileSize;
 });
 
 //注册缓存服务

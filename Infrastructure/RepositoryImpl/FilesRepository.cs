@@ -59,6 +59,22 @@ namespace Infrastructure.RepositoryImpl {
             return Task.FromResult(list);
         }
 
+        public async Task DeleteOne(Files file) {
+            if (file.IsFolder) {
+                //查询出所有子文件
+                var allChildren = await FindChildren(file.FileId);
+                //删除所有子文件
+                dbContext.Files.RemoveRange(allChildren);
+            }
+            //删除父文件
+            dbContext.Files.Remove(file);
+        }
+
+        public Task<List<Files>> FindChildren(Guid fileId) {
+            var fileChildren = FindAllChildren(fileId, _allFilesList).ToList();
+            return Task.FromResult(fileChildren);
+        }
+
         public void CompleteFileUrl(Files? file) {
             if (file == null) { return; }
 
@@ -67,6 +83,22 @@ namespace Infrastructure.RepositoryImpl {
             file.StaticDownloadUrl = _basicFilePath + relativeUri;
             file.DynamicDownloadUrl = _onlineFilePath + relativeUri;
         }
+
+        /// <summary>
+        /// 传入文件Id，查询出所有的子文件
+        /// </summary>
+        /// <param name="parentId"></param>
+        /// <param name="list"></param>
+        /// <returns></returns>
+        private IEnumerable<Files> FindAllChildren(Guid parentId, List<Files> list) {
+            var children = list.Where(f => f.ParentId == parentId);
+            foreach (var child in children) {
+                yield return child;
+                foreach (var grandChild in FindAllChildren(child.FileId, list)) {
+                    yield return grandChild;
+                }
+            }
+        } 
 
         /// <summary>
         /// 补全文件列表的静态保存路径
@@ -84,7 +116,7 @@ namespace Infrastructure.RepositoryImpl {
         /// <returns></returns>
         private string RecursionJoint(Guid? parentId, string filePath) {
             if (parentId == null || parentId == Guid.Empty) {
-                 return filePath;
+                return filePath;
             }
 
             var filesModel = _allFilesList.SingleOrDefault(f => f.FileId == parentId);

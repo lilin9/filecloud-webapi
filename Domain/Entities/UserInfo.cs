@@ -1,5 +1,6 @@
 ﻿using Domain.Entities.Enum;
 using Domain.Entities.SalveModel;
+using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
 using NETCore.Encrypt;
 
@@ -46,7 +47,7 @@ namespace Domain.Entities {
         /// 更新时间，必须
         /// </summary>
         [Comment("更新时间，必须")]
-        public DateTime UpdateTime { get; set; }
+        public DateTime UpdateTime { get; private set; }
 
         /// <summary>
         /// 用户头像，必须
@@ -55,10 +56,20 @@ namespace Domain.Entities {
         public string? Avatar { get; private set; }
 
         /// <summary>
+        /// 头像静态访问地址
+        /// </summary>
+        public string? StaticAvatar { get; private set; }
+
+        /// <summary>
+        /// 头像在线访问地址
+        /// </summary>
+        public string? OnlineAvatar { get; private set; }
+
+        /// <summary>
         /// 账户被封禁时间，-1：永久；0：正常，必须
         /// </summary>
         [Comment("账户被封禁时间，-1：永久；0：正常，必须")]
-        public MyTime BanTime { get; set; } = new MyTime {Value = 0,Unit = TimeUnit.Hour};
+        public MyTime BanTime { get; private set; } = new MyTime { Value = 0, Unit = TimeUnit.Hour };
 
         /// <summary>
         /// 用户邮箱，必须
@@ -79,20 +90,20 @@ namespace Domain.Entities {
         private string password;
         public string Password {
             get => password;
-            set => password = LockPass(value);
+            private set => password = value;
         }
 
         /// <summary>
         /// 账户禁用原因，可选
         /// </summary>
         [Comment("账户禁用原因，可选")]
-        public string? DisableReason { get; set; }
+        public string? DisableReason { get; private set; }
 
         /// <summary>
         /// 账户解封时间，可选
         /// </summary>
         [Comment("账户解封时间，可选")]
-        public DateTime? UnLockTime { get; set; }
+        public DateTime? UnLockTime { get; private set; }
 
 
         /// <summary>
@@ -100,8 +111,11 @@ namespace Domain.Entities {
         /// </summary>
         /// <param name="unLockPass">未加密密码</param>
         /// <returns></returns>
-        public bool CheckPassword(string unLockPass) {
-            return Password.Equals(LockPass(unLockPass));
+        public bool CheckPassword(string? unLockPass) {
+            if (string.IsNullOrEmpty(unLockPass)) {
+                return false;
+            }
+            return Password.Equals(LockPassword(unLockPass));
         }
 
         /// <summary>
@@ -109,8 +123,68 @@ namespace Domain.Entities {
         /// </summary>
         /// <param name="pass"></param>
         /// <returns></returns>
-        public string LockPass(string pass) {
+        public void LockPass(string pass) {
+            Password = EncryptProvider.Md5(pass);
+        }
+
+        /// <summary>
+        /// 对用户密码进行md5加密
+        /// </summary>
+        /// <param name="pass"></param>
+        /// <returns></returns>
+        public string LockPassword(string pass) {
             return EncryptProvider.Md5(pass);
+        }
+
+
+        /// <summary>
+        /// 修改用户头像
+        /// </summary>
+        /// <param name="avatarFile">头像文件</param>
+        public async void UpdateAvatar(IFormFile avatarFile) {
+            if (string.IsNullOrEmpty(Avatar)) {
+                CompletePath(avatarFile.FileName);
+            }
+            //原来的用户头像存在，就删除再替换
+            if (File.Exists(StaticAvatar)) {
+                File.Delete(StaticAvatar);
+            }
+
+            await using var fs = new FileStream(StaticAvatar!, FileMode.Create, FileAccess.Write);
+            await avatarFile.CopyToAsync(fs);
+        }
+
+
+        /// <summary>
+        /// 补全文件路径
+        /// </summary>
+        /// <param name="basicAvatarPath">物理文件路径的基础路径</param>
+        /// <param name="onlineFilePath">在线访问文件基础路径</param>
+        public void CompletePath(string basicAvatarPath, string onlineFilePath) {
+            //物理目录路径不存在，创建一下下
+            if (!Directory.Exists(basicAvatarPath)) {
+                Directory.CreateDirectory(basicAvatarPath);
+            }
+
+            StaticAvatar = basicAvatarPath + Avatar;
+            OnlineAvatar = onlineFilePath + Avatar;
+        }
+
+        /// <summary>
+        /// 补全文件路径
+        /// </summary>
+        /// <param name="avatarName">头像文件名</param>
+        public void CompletePath(string avatarName) {
+            Avatar = UserId + Path.GetExtension(avatarName);
+            StaticAvatar += Avatar;
+            OnlineAvatar += Avatar;
+        }
+
+        /// <summary>
+        /// 设置修改时间
+        /// </summary>
+        public void SetUpdateTimeNow() {
+            UpdateTime = DateTime.Now;
         }
     }
 }
